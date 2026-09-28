@@ -1,10 +1,10 @@
 """Notebook Tools MCP Server — lightweight read/search/edit for Jupyter notebooks."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
-mcp = FastMCP(
+mcp = MCPServer(
     "notebook-tools",
     instructions="""\
 Efficient .ipynb navigation — use INSTEAD of the built-in Read tool for notebooks.

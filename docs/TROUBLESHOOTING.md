@@ -127,6 +127,37 @@ Make sure the `python` in your `.mcp.json` command matches the Python where the 
 
 ---
 
+## `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`
+
+### Symptoms
+
+- `/mcp` shows `notebook-tools` with a red status, or the server dies immediately on startup
+- The error names `mcp.server.fastmcp` — either the bare import error, or the SDK's own hint: *"This is mcp 2.x, where FastMCP was renamed to MCPServer"*
+
+### Cause
+
+MCP Python SDK v2 renamed `FastMCP` to `MCPServer` and deleted `mcp.server.fastmcp` (no compatibility shim). Code and installed SDK are on opposite sides of that rename: v0.5.0+ source (`from mcp.server import MCPServer`) running against mcp 1.x, or pre-0.5.0 source (`from mcp.server.fastmcp import FastMCP`) running against mcp 2.x.
+
+### Fix
+
+Install the SDK line that matches your source:
+
+```bash
+# v0.5.0+ imports MCPServer → needs mcp 2.x
+pip install --force-reinstall "mcp>=2.1,<3"
+
+# v0.4.0 and earlier import FastMCP → needs mcp 1.x
+pip install --force-reinstall "mcp<2"
+```
+
+With an editable install, re-resolving the dependency from the package metadata is enough:
+
+```bash
+uv tool install --force -e /path/to/notebook-tools-mcp
+```
+
+---
+
 ## Changes not taking effect after editing source
 
 ### Symptoms

@@ -8,11 +8,11 @@ AI CLI agents (Claude Code, Gemini CLI, Codex) working inside VS Code Dev Contai
 
 ## Architecture
 
-6 files, ~840 lines, zero dependencies beyond `mcp>=1.10.1`:
+6 files, ~840 lines, zero dependencies beyond `mcp>=2.1,<3`:
 
 ```
 notebook_tools_mcp/
-  __init__.py      (45L)  FastMCP instance + server instructions
+  __init__.py      (45L)  MCPServer instance + server instructions
   _helpers.py      (208L) Shared utilities: load/save, cell formatting, parsing, addressing
   read_tools.py    (250L) 6 read tools
   search_tools.py  (125L) 2 search tools
@@ -65,7 +65,7 @@ Building AST-based dependency tracking would add ~200+ lines of fragile code tha
 
 Claude Code (and similar agents) decide which tool to use based on three channels, in order of priority:
 
-1. **MCP server `instructions`** — set via `FastMCP(instructions=...)` in `__init__.py`. Injected into the system prompt of every conversation where the server is connected. This is where the "use nb_search INSTEAD OF Grep for .ipynb" guidance lives. Agents see this before any tool is called.
+1. **MCP server `instructions`** — set via `MCPServer(instructions=...)` in `__init__.py`. Injected into the system prompt of every conversation where the server is connected. This is where the "use nb_search INSTEAD OF Grep for .ipynb" guidance lives. Agents see this before any tool is called.
 
 2. **Tool docstrings** — the `"""..."""` on each `@mcp.tool()` function. Shown when the agent discovers tools (e.g. via ToolSearch). Each docstring says what the tool does AND when to prefer it over alternatives.
 
@@ -228,6 +228,11 @@ In practice, MCP write tools are used more often because the typical agent workf
 Both tools can coexist safely. The server's `instructions` field tells agents to prefer MCP write tools during the `nb_overview` workflow. There is no conflict as long as the agent doesn't use both on the same cell in the same turn.
 
 ## Changelog
+
+### v0.5.0 (2026-09-28)
+
+- **Dependency:** Migrated to the MCP Python SDK v2 (`mcp>=2.1,<3`). v2 renamed `FastMCP` to `MCPServer` and removed `mcp.server.fastmcp` without a compatibility shim, so this version does not run on mcp 1.x. Stay on v0.4.0 with `mcp<2` if you need the 1.x line
+- No behavior change: same 12 tools, same schemas, same `instructions`, same stdio transport
 
 ### v0.4.0 (2026-09-28)
 
