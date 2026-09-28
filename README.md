@@ -8,15 +8,15 @@ AI CLI agents (Claude Code, Gemini CLI, Codex) working inside VS Code Dev Contai
 
 ## Architecture
 
-6 files, ~700 lines, zero dependencies beyond `mcp>=1.10.1`:
+6 files, ~840 lines, zero dependencies beyond `mcp>=1.10.1`:
 
 ```
 notebook_tools_mcp/
-  __init__.py      (35L)  FastMCP instance + server instructions
-  _helpers.py      (182L) Shared utilities: load/save, cell formatting, parsing
-  read_tools.py    (251L) 6 read tools
-  search_tools.py  (126L) 2 search tools
-  write_tools.py   (104L) 3 write tools
+  __init__.py      (45L)  FastMCP instance + server instructions
+  _helpers.py      (208L) Shared utilities: load/save, cell formatting, parsing, addressing
+  read_tools.py    (250L) 6 read tools
+  search_tools.py  (125L) 2 search tools
+  write_tools.py   (198L) 4 write tools
   server.py        (16L)  Entry point
 ```
 
@@ -32,7 +32,7 @@ Each file < 260 lines. Single responsibility. Shared helpers avoid duplication. 
 
 **stdio transport only.** Launched on demand by the MCP client, communicates via stdin/stdout, exits when done. No HTTP endpoints, no WebSocket connections, no persistent processes.
 
-**Consistent index-based addressing.** All 11 tools use integer cell indices. `nb_overview` shows indices → `nb_read_cell(15)` reads → `nb_write_cell(15, ...)` edits. One addressing scheme throughout.
+**Consistent index-based addressing.** All 12 tools use integer cell indices. `nb_overview` shows indices → `nb_read_cell(15)` reads → `nb_write_cell(15, ...)` edits. One addressing scheme throughout. (`nb_batch_write_cells` also accepts a cell `id` string, for when the reference comes from outside the `nb_overview` flow.)
 
 **`sort_keys=True` on save.** Matches Jupyter/nbformat convention for deterministic output. Prevents noisy git diffs from key reordering between load/save cycles.
 
@@ -44,7 +44,7 @@ Claude Code has a built-in `NotebookEdit` tool (addresses cells by `cell_id` or 
 |---|---|---|
 | Addressing | Integer index (matches `nb_overview`) | `cell_id` string or `cell_number` (0-indexed) |
 | Best for | Within the `nb_overview` → read → edit flow | When VS Code or another tool provides the cell_id |
-| Footprint | 102 lines | Built-in |
+| Footprint | 198 lines | Built-in |
 
 The MCP write tools exist for **workflow cohesion** — an agent using `nb_overview` to find a cell already has its index. Requiring a lookup to get the `cell_id` for NotebookEdit would add a pointless extra step.
 
@@ -142,6 +142,30 @@ All tools take `notebook_path` (absolute path) as first parameter unless noted.
 | `nb_write_cell` | `notebook_path`, `cell_index`, `source` | Overwrite source content of an existing cell |
 | `nb_insert_cell` | `notebook_path`, `cell_index` (`-1` to append), `cell_type`, `source` | Insert a new cell at position |
 | `nb_delete_cell` | `notebook_path`, `cell_index` | Delete a cell |
+| `nb_batch_write_cells` | `notebook_path`, `writes=[{"cell_id", "source"}]`, `inserts=[{"after_cell_id", "cells": [{"cell_type", "source"}]}]` | Overwrite and/or insert many cells in one load/save. `cell_id` / `after_cell_id` accept an integer index or a cell id string. All-or-nothing: the notebook is saved only if every operation validates |
+
+Batching is the point: `N` separate `nb_write_cell` calls read and rewrite the whole notebook `N` times, and a mid-batch failure leaves the file half-edited. `nb_batch_write_cells` validates every operation first, then applies them with a single save.
+
+```json
+{
+  "notebook_path": "/path/to/nb.ipynb",
+  "writes": [
+    {"cell_id": 3, "source": "print('rewritten')"},
+    {"cell_id": "a1b2c3d4", "source": "# rewritten by id"}
+  ],
+  "inserts": [
+    {
+      "after_cell_id": 7,
+      "cells": [
+        {"cell_type": "markdown", "source": "## Added section"},
+        {"cell_type": "code", "source": "x = 1"}
+      ]
+    }
+  ]
+}
+```
+
+Insert anchors refer to the notebook as it was before the call, so a batch can insert at several anchors without tracking index shifts.
 
 ## Typical agent workflow
 
@@ -185,10 +209,11 @@ Add this to your project's `CLAUDE.md` to steer Claude Code toward using noteboo
 | Edit notebook cell | `nb_write_cell` (by index from nb_overview) | — | Consistent index-based workflow |
 | Edit notebook cell | `NotebookEdit` (by cell_id) | — | Use when cell_id is known from another source |
 | Insert/delete cells | `nb_insert_cell` / `nb_delete_cell` | — | Index-based, consistent with nb_overview |
+| Edit many cells at once | `nb_batch_write_cells` | repeated `nb_write_cell` / `nb_insert_cell` | One load/save, all-or-nothing |
 
 **Workflow:** `nb_overview` (get cell indices) → `nb_read_cell` or `nb_search` → `nb_write_cell`.
 
-All 11 tools are in the `notebook-tools` MCP server. Start with `nb_overview` for any notebook interaction.
+All 12 tools are in the `notebook-tools` MCP server. Start with `nb_overview` for any notebook interaction.
 ```
 
 ### When NotebookEdit is the better choice
@@ -203,6 +228,11 @@ In practice, MCP write tools are used more often because the typical agent workf
 Both tools can coexist safely. The server's `instructions` field tells agents to prefer MCP write tools during the `nb_overview` workflow. There is no conflict as long as the agent doesn't use both on the same cell in the same turn.
 
 ## Changelog
+
+### v0.4.0 (2026-09-28)
+
+- Added `nb_batch_write_cells`: overwrite and/or insert many cells in a single load/save, with all-or-nothing validation. Cell references accept an integer index or a cell `id` string
+- Added `resolve_cell_index` to `_helpers.py` for shared index/cell-id resolution
 
 ### v0.3.0 (2026-02-25)
 

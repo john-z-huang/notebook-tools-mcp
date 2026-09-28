@@ -1,6 +1,6 @@
 """Notebook Tools MCP Server — lightweight read/search/edit for Jupyter notebooks."""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from mcp.server.fastmcp import FastMCP
 
@@ -30,6 +30,7 @@ WHEN TO USE WHICH TOOL:
     nb_write_cell  → Overwrite cell source by index. Use when you already know the index from nb_overview/nb_read_cell.
     nb_insert_cell → Insert new cell at position. Use cell_index=-1 to append.
     nb_delete_cell → Delete cell by index.
+    nb_batch_write_cells → Batch overwrite and/or insert many cells in ONE call (one load/save). Prefer this over repeated nb_write_cell/nb_insert_cell calls.
 
   VS BUILT-IN TOOLS:
     Use nb_* tools instead of Read for .ipynb — 400-3000x fewer tokens.

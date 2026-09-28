@@ -57,6 +57,35 @@ def parse_cell_indices(spec: str, max_index: int) -> list[int]:
     return indices
 
 
+def resolve_cell_index(cells: list[dict], ref: int | str) -> int:
+    """Resolve a cell reference to a 0-based index.
+
+    Accepts an integer index, or a string that is matched against the cells'
+    'id' field first and only then parsed as an integer index.
+    """
+    if isinstance(ref, bool) or not isinstance(ref, (int, str)):
+        raise ValueError(
+            f"invalid cell reference {ref!r}: expected an integer index or a cell id string"
+        )
+
+    if isinstance(ref, int):
+        if 0 <= ref < len(cells):
+            return ref
+        raise ValueError(f"cell index {ref} out of range (0-{len(cells) - 1})")
+
+    for i, cell in enumerate(cells):
+        if cell.get("id") == ref:
+            return i
+
+    try:
+        idx = int(ref.strip())
+    except ValueError:
+        raise ValueError(f"cell id '{ref}' not found in notebook") from None
+    if 0 <= idx < len(cells):
+        return idx
+    raise ValueError(f"cell index {idx} out of range (0-{len(cells) - 1})")
+
+
 def get_cell_source(cell: dict) -> str:
     """Get cell source as a single string."""
     src = cell.get("source", "")

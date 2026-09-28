@@ -13,7 +13,7 @@
 
 Claude Code requires explicit permission for MCP tools. The main conversation can prompt you interactively ("Allow `mcp__notebook-tools__nb_search`?"), but **subagents cannot prompt** — they run autonomously, so any unapproved tool is auto-denied.
 
-Permissions live in `.claude/settings.local.json` under `permissions.allow`. Each MCP tool needs an entry in the format `mcp__<server-name>__<tool-name>`. If your `settings.local.json` doesn't list all 11 notebook-tools, subagents can't use them.
+Permissions live in `.claude/settings.local.json` under `permissions.allow`. Each MCP tool needs an entry in the format `mcp__<server-name>__<tool-name>`. If your `settings.local.json` doesn't list all 12 notebook-tools, subagents can't use them.
 
 ### Fix: Manual setup
 
@@ -27,7 +27,7 @@ cat .claude/settings.local.json
 mkdir -p .claude
 ```
 
-**2. Add all 11 tool permissions to `permissions.allow`:**
+**2. Add all 12 tool permissions to `permissions.allow`:**
 
 ```json
 {
@@ -43,7 +43,8 @@ mkdir -p .claude
       "mcp__notebook-tools__nb_search_dir",
       "mcp__notebook-tools__nb_write_cell",
       "mcp__notebook-tools__nb_insert_cell",
-      "mcp__notebook-tools__nb_delete_cell"
+      "mcp__notebook-tools__nb_delete_cell",
+      "mcp__notebook-tools__nb_batch_write_cells"
     ],
     "deny": []
   }
@@ -74,7 +75,7 @@ If the subagent succeeds, permissions are working.
 If you use [SciAgent-toolkit](https://github.com/tony-zhelonkin/SciAgent-toolkit), the addon system handles permissions automatically:
 
 ```bash
-# This adds all 11 permissions to settings.local.json
+# This adds all 12 permissions to settings.local.json
 ./scripts/manage-addon.sh enable notebook-tools --project-dir /path/to/project
 ```
 

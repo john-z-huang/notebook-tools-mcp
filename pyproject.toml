@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "notebook-tools-mcp"
-version = "0.3.0"
+version = "0.4.0"
 description = "Lightweight MCP server for efficient Jupyter notebook reading, searching, and editing"
 requires-python = ">=3.10"
 dependencies = ["mcp>=1.10.1"]
