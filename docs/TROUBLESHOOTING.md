@@ -13,7 +13,7 @@
 
 Claude Code requires explicit permission for MCP tools. The main conversation can prompt you interactively ("Allow `mcp__notebook-tools__nb_search`?"), but **subagents cannot prompt** — they run autonomously, so any unapproved tool is auto-denied.
 
-Permissions live in `.claude/settings.local.json` under `permissions.allow`. Each MCP tool needs an entry in the format `mcp__<server-name>__<tool-name>`. If your `settings.local.json` doesn't list all 11 notebook-tools, subagents can't use them.
+Permissions live in `.claude/settings.local.json` under `permissions.allow`. Each MCP tool needs an entry in the format `mcp__<server-name>__<tool-name>`. If your `settings.local.json` doesn't list all 12 notebook-tools, subagents can't use them.
 
 ### Fix: Manual setup
 
@@ -27,7 +27,7 @@ cat .claude/settings.local.json
 mkdir -p .claude
 ```
 
-**2. Add all 11 tool permissions to `permissions.allow`:**
+**2. Add all 12 tool permissions to `permissions.allow`:**
 
 ```json
 {
@@ -43,7 +43,8 @@ mkdir -p .claude
       "mcp__notebook-tools__nb_search_dir",
       "mcp__notebook-tools__nb_write_cell",
       "mcp__notebook-tools__nb_insert_cell",
-      "mcp__notebook-tools__nb_delete_cell"
+      "mcp__notebook-tools__nb_delete_cell",
+      "mcp__notebook-tools__nb_batch_write_cells"
     ],
     "deny": []
   }
@@ -74,7 +75,7 @@ If the subagent succeeds, permissions are working.
 If you use [SciAgent-toolkit](https://github.com/tony-zhelonkin/SciAgent-toolkit), the addon system handles permissions automatically:
 
 ```bash
-# This adds all 11 permissions to settings.local.json
+# This adds all 12 permissions to settings.local.json
 ./scripts/manage-addon.sh enable notebook-tools --project-dir /path/to/project
 ```
 
@@ -122,6 +123,37 @@ Make sure the `python` in your `.mcp.json` command matches the Python where the 
     }
   }
 }
+```
+
+---
+
+## `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`
+
+### Symptoms
+
+- `/mcp` shows `notebook-tools` with a red status, or the server dies immediately on startup
+- The error names `mcp.server.fastmcp` — either the bare import error, or the SDK's own hint: *"This is mcp 2.x, where FastMCP was renamed to MCPServer"*
+
+### Cause
+
+MCP Python SDK v2 renamed `FastMCP` to `MCPServer` and deleted `mcp.server.fastmcp` (no compatibility shim). Code and installed SDK are on opposite sides of that rename: v0.5.0+ source (`from mcp.server import MCPServer`) running against mcp 1.x, or pre-0.5.0 source (`from mcp.server.fastmcp import FastMCP`) running against mcp 2.x.
+
+### Fix
+
+Install the SDK line that matches your source:
+
+```bash
+# v0.5.0+ imports MCPServer → needs mcp 2.x
+pip install --force-reinstall "mcp>=2.1,<3"
+
+# v0.4.0 and earlier import FastMCP → needs mcp 1.x
+pip install --force-reinstall "mcp<2"
+```
+
+With an editable install, re-resolving the dependency from the package metadata is enough:
+
+```bash
+uv tool install --force -e /path/to/notebook-tools-mcp
 ```
 
 ---
